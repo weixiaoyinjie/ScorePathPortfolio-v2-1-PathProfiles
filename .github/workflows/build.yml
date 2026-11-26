@@ -13,17 +13,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
+      - name: Extract Source ZIP
+        run: |
+          mkdir -p extracted
+          unzip -o ScorePathPortfolio_v2_1_PathProfiles_OneUpload.zip -d extracted
+
+      - name: Find Gradle Project
+        run: |
+          FILE=$(find extracted -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" \) | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "Gradle project not found"
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$FILE")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project found: $PROJECT_DIR"
+          ls -la "$PROJECT_DIR"
+
       - name: Check Android SDK
         run: |
-          echo "Android SDK: $ANDROID_HOME"
-          ls "$ANDROID_HOME/platforms"
-          ls "$ANDROID_HOME/build-tools"
           test -d "$ANDROID_HOME/platforms/android-35"
           test -d "$ANDROID_HOME/build-tools/35.0.0"
 
@@ -33,11 +47,13 @@ jobs:
           gradle-version: '8.9'
 
       - name: Build APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        run: |
+          cd "$PROJECT_DIR"
+          gradle :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ScorePathPortfolio-v2.1-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: extracted/**/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
