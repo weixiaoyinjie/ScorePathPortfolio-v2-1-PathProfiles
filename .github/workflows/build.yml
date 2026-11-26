@@ -33,8 +33,15 @@ jobs:
           fi
           PROJECT_DIR=$(dirname "$FILE")
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Project found: $PROJECT_DIR"
           ls -la "$PROJECT_DIR"
+
+      - name: Enable AndroidX
+        run: |
+          cd "$PROJECT_DIR"
+          touch gradle.properties
+          sed -i '/^[[:space:]]*android.useAndroidX[[:space:]]*=/d' gradle.properties
+          printf '\nandroid.useAndroidX=true\n' >> gradle.properties
+          cat gradle.properties
 
       - name: Check Android SDK
         run: |
@@ -49,7 +56,7 @@ jobs:
       - name: Build APK
         run: |
           cd "$PROJECT_DIR"
-          gradle :app:assembleDebug --no-daemon --stacktrace
+          gradle :app:assembleDebug --no-daemon --stacktrace -Pandroid.useAndroidX=true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
